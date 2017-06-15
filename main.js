@@ -15,23 +15,43 @@ app.set('view engine', 'ejs');
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger('dev'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // We will be using only one route.
 // use $-> NODE_ENV=production npm start --> to replicate prod enviroment
+// app.use('/apiproxy', function(req, res) {
+//   var url = 'https://phoenixworkgroup.atlassian.net/rest/api/latest' + req.url;
+//   req.pipe(request(url)).pipe(res);
+// });
+
 app.use('/apiproxy', function(req, res) {
   var url = 'https://phoenixworkgroup.atlassian.net/rest/api/latest' + req.url;
-  req.pipe(request(url)).pipe(res);
+  var r = null;
+  if(req.method === 'POST') {
+     r = request.post(url,{ json: true, body: req.body });
+  } 
+  else if(req.method === 'DELETE'){
+  	r = request.delete(url,{ json: true, body: req.body });
+  }
+  else {
+  	//GET as default.
+     r = request(url);
+  }
+  req.pipe(r).pipe(res);
 });
 
+//Disabling early use of body parser for POST Proxy requests.
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+//General Test for API in browser returns Thank you.
 app.get('/', function(req,res){
 	res.render('index.ejs', { message: 'Thank You'});
 });
 
-// catch 404 and forward to error handler
+// catch 404 and forward to error handler as all other reqs are 404's
 app.use(function(req, res, next) {
   var err = new Error('Are you trying to find a black hole? (⊙.◎)');
   err.status = 404;
